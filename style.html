@@ -129,6 +129,17 @@
   .photo-card figcaption strong{ font-family: var(--body); font-weight: 700; font-size: 12px; line-height: 1.3; }
   .photo-card .slide-num{ font-family: var(--mono); font-size: 9.5px; color: var(--brand-deep); text-transform: uppercase; }
   .photo-card .slide-price{ font-family: var(--mono); font-weight: 700; color: var(--savings); font-size: 12.5px; }
+  .photo-card .shop-link{
+    font-family: var(--body); font-weight: 700; font-size: 11px; color: var(--brand-deep);
+    text-decoration: none;
+  }
+  .photo-card .shop-link:hover{ text-decoration: underline; }
+  .links-list{
+    display: flex; flex-direction: column; gap: 6px; font-family: var(--mono); font-size: 11.5px;
+    background: var(--bg); border: 1px dashed var(--line-strong); border-radius: 8px; padding: 10px 12px;
+  }
+  .links-list a{ color: var(--brand-deep); text-decoration: none; word-break: break-all; }
+  .links-list a:hover{ text-decoration: underline; }
   .group-thumbs{ display: flex; gap: 10px; flex-wrap: wrap; }
   .group-thumbs figure{ margin: 0; text-align: center; }
   .group-thumbs img{ width: 84px; height: 84px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; }
@@ -372,6 +383,7 @@ Generate all ${n+1} images now.`;
               <span class="slide-num">#${i+1} · ${escapeHtml(o.slot)}</span>
               <strong>${escapeHtml(o.item.n)}</strong>
               <span class="slide-price">$${o.item.p.toFixed(2)}</span>
+              <a class="shop-link" href="${o.item.l}" target="_blank" rel="noopener noreferrer">🔗 Product link</a>
             </figcaption>
           </figure>`).join("")}
       </div>
@@ -385,6 +397,12 @@ Generate all ${n+1} images now.`;
           <div class="prompt-box" id="combinedPromptBox">${escapeHtml(cPrompt)}</div>
           <button class="copy-btn" id="combinedCopyBtn" data-prompt="${encodeURIComponent(cPrompt)}">Copy full prompt</button>
           <div class="cta-note">🔗 Final image includes the price tag total AND "Link in bio"</div>
+
+          <span class="step-label" style="margin:14px 0 4px;">Product links (bestfinds52)</span>
+          <div class="links-list">
+            ${outfit.map((o,i) => `<a href="${o.item.l}" target="_blank" rel="noopener noreferrer">#${i+1} ${escapeHtml(o.item.n)} — $${o.item.p.toFixed(2)}<br>${o.item.l}</a>`).join("")}
+          </div>
+          <button class="copy-btn" id="linksCopyBtn" data-prompt="${encodeURIComponent(outfit.map((o,i) => `#${i+1} ${o.item.n} — $${o.item.p.toFixed(2)}\n${o.item.l}`).join("\n\n"))}">Copy all links</button>
         </div>
       </div>`;
 
