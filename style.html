@@ -118,6 +118,8 @@
   .copy-btn.copied{ background: var(--savings); color: #fff; }
 
   .group-slide{ border-color: var(--brand); border-width: 2px; }
+  .master-slide{ border-color: var(--ink); border-width: 2px; background: var(--surface); }
+  .master-slide .slide-num{ color: var(--ink-soft); }
   .group-thumbs{ display: flex; gap: 10px; flex-wrap: wrap; }
   .group-thumbs figure{ margin: 0; text-align: center; }
   .group-thumbs img{ width: 84px; height: 84px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; }
@@ -152,6 +154,15 @@
 </header>
 
 <div class="wrap">
+  <div class="slide master-slide">
+    <div class="slide-body" style="grid-column:1/-1;">
+      <span class="slide-num">Step 0 · Paste this first in ChatGPT, before any slide prompt</span>
+      <h3 class="slide-name">Master prompt (once per ChatGPT session)</h3>
+      <div class="prompt-box" id="masterPromptBox"></div>
+      <button class="copy-btn" id="masterCopyBtn">Copy master prompt</button>
+    </div>
+  </div>
+
   <div class="controls">
     <div class="toggle" id="genderToggle">
       <button data-g="female" class="active">Female</button>
@@ -388,6 +399,25 @@
       });
     });
   }
+
+  const MASTER_PROMPT = `For this whole conversation: every outfit I send you is a 5-slide TikTok carousel. Each slide is its own separate generated image — actually generate the image, don't just describe it. Every image is 3:4 portrait aspect ratio, not 9:16 and not square.
+
+I will send slide prompts one at a time, each with a reference photo attached where I have a real product. If I only send you 1 or 2 real slide prompts and then say "fill in the rest" or stop sending new ones, invent the remaining pieces yourself so the total still reaches 5 images — matching the style, color palette, and season of the pieces I did give you, on the same branded orange Kakoscout24 carpet, same lighting. Invented pieces get no price tag; only pieces I gave you a reference photo and price for get one.
+
+Confirm you've got this, then wait for my first slide prompt.`;
+
+  document.getElementById("masterPromptBox").textContent = MASTER_PROMPT;
+  document.getElementById("masterCopyBtn").addEventListener("click", (e) => {
+    copyText(e.currentTarget, MASTER_PROMPT);
+  });
+  document.getElementById("masterPromptBox").addEventListener("click", () => {
+    const box = document.getElementById("masterPromptBox");
+    const range = document.createRange();
+    range.selectNodeContents(box);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
 
   generate();
 </script>
