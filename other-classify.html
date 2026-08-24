@@ -63,8 +63,16 @@
     overflow: hidden; display: flex; flex-direction: column;
   }
   .card.done{ border-color: var(--savings); }
-  .card-img{ aspect-ratio: 1/1; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .card.selected{ border-color: var(--brand); border-width: 3px; box-shadow: 0 0 0 2px var(--brand) inset; }
+  .card-img{ aspect-ratio: 1/1; background: var(--bg); border-bottom: 1px solid var(--line); position: relative; cursor: pointer; }
   .card-img img{ width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card-check{
+    position: absolute; top: 7px; left: 7px; width: 22px; height: 22px; border-radius: 6px;
+    background: rgba(255,255,255,0.85); border: 2px solid var(--line-strong);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--body); font-weight: 800; font-size: 13px; color: transparent;
+  }
+  .card.selected .card-check{ background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
   .card-body{ padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 6px; }
   .card-name{
     font-family: var(--body); font-weight: 700; font-size: 12.5px; line-height: 1.3;
@@ -87,6 +95,31 @@
     border: 2px solid var(--line-strong); background: var(--surface); color: var(--ink); cursor: pointer;
   }
   .pager button:disabled{ opacity: 0.4; cursor: default; }
+
+  .bulk-bar{
+    position: sticky; top: 62px; z-index: 6; display: none;
+    background: var(--brand); color: var(--brand-ink); border-radius: 12px;
+    padding: 10px 14px; margin: 0 0 16px; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .bulk-bar.show{ display: flex; }
+  .bulk-count{ font-family: var(--display); font-weight: 800; font-size: 14px; white-space: nowrap; }
+  .bulk-bar input{
+    flex: 1; min-width: 160px; font-family: var(--body); font-size: 14px; font-weight: 700;
+    padding: 8px 12px; border-radius: 999px; border: none;
+  }
+  .bulk-bar button{
+    font-family: var(--body); font-weight: 800; font-size: 12.5px; padding: 8px 14px; border-radius: 999px;
+    border: none; cursor: pointer;
+  }
+  .bulk-apply-btn{ background: var(--ink); color: var(--bg); }
+  .bulk-apply-btn:hover{ background: #000; }
+  .bulk-clear-btn{ background: rgba(0,0,0,0.15); color: var(--brand-ink); }
+  .select-page-btn{
+    font-family: var(--body); font-weight: 700; font-size: 12px; color: var(--ink-soft);
+    background: var(--surface); border: 2px solid var(--line-strong); border-radius: 999px;
+    padding: 6px 12px; cursor: pointer; white-space: nowrap;
+  }
+  .select-page-btn:hover{ border-color: var(--brand); color: var(--brand-deep); }
 </style>
 
 <header class="top">
@@ -102,12 +135,20 @@
       <input type="text" id="search" placeholder="Suche nach Produktname…" autocomplete="off">
     </div>
     <label class="filter-toggle"><input type="checkbox" id="onlyUnfilled"> Nur unbearbeitete zeigen</label>
+    <button class="select-page-btn" id="selectPageBtn">Alle auf dieser Seite markieren</button>
     <span class="progress" id="progress"></span>
     <button class="export-btn" id="exportBtn">Alle Eingaben kopieren</button>
   </div>
 </div>
 
 <div class="wrap">
+  <div class="bulk-bar" id="bulkBar">
+    <span class="bulk-count" id="bulkCount"></span>
+    <input type="text" id="bulkInput" placeholder="Was sind diese Produkte? (einmal eintippen)" autocomplete="off">
+    <button class="bulk-apply-btn" id="bulkApplyBtn">Auf Auswahl anwenden</button>
+    <button class="bulk-clear-btn" id="bulkClearBtn">Auswahl aufheben</button>
+  </div>
+
   <div class="pager" id="pagerTop"></div>
   <div class="grid" id="grid"></div>
   <div class="pager" id="pagerBottom"></div>
@@ -127,6 +168,14 @@
   }
 
   let page = 1, query = "", onlyUnfilled = false;
+  let selectedIds = new Set();
+
+  function updateBulkBar(){
+    const bar = document.getElementById("bulkBar");
+    const count = selectedIds.size;
+    bar.classList.toggle("show", count > 0);
+    document.getElementById("bulkCount").textContent = `${count} ausgewählt`;
+  }
 
   function escapeHtml(s){
     return s.replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
@@ -174,9 +223,13 @@
     const gridEl = document.getElementById("grid");
     gridEl.innerHTML = slice.map(item => {
       const val = notes[item._id] || "";
+      const isSel = selectedIds.has(item._id);
       return `
-        <div class="card ${val.trim() ? "done" : ""}">
-          <div class="card-img"><img src="${item.img}" alt="${escapeHtml(item.n)}" loading="lazy"></div>
+        <div class="card ${val.trim() ? "done" : ""} ${isSel ? "selected" : ""}" data-card-id="${item._id}">
+          <div class="card-img" data-id="${item._id}">
+            <img src="${item.img}" alt="${escapeHtml(item.n)}" loading="lazy">
+            <span class="card-check">✓</span>
+          </div>
           <div class="card-body">
             <div class="card-name">${escapeHtml(item.n)}</div>
             <div class="card-price">$${item.p.toFixed(2)}</div>
@@ -196,9 +249,20 @@
       });
     });
 
+    gridEl.querySelectorAll(".card-img").forEach(imgWrap => {
+      imgWrap.addEventListener("click", () => {
+        const id = Number(imgWrap.dataset.id);
+        if(selectedIds.has(id)) selectedIds.delete(id);
+        else selectedIds.add(id);
+        imgWrap.closest(".card").classList.toggle("selected", selectedIds.has(id));
+        updateBulkBar();
+      });
+    });
+
     renderPager(document.getElementById("pagerTop"), totalPages);
     renderPager(document.getElementById("pagerBottom"), totalPages);
     updateProgress();
+    updateBulkBar();
   }
 
   let debounceTimer;
@@ -215,6 +279,33 @@
     onlyUnfilled = e.target.checked;
     page = 1;
     render();
+  });
+
+  document.getElementById("selectPageBtn").addEventListener("click", () => {
+    const filtered = getFiltered();
+    const start = (page-1) * PAGE_SIZE;
+    const slice = filtered.slice(start, start + PAGE_SIZE);
+    slice.forEach(item => selectedIds.add(item._id));
+    render();
+  });
+
+  document.getElementById("bulkClearBtn").addEventListener("click", () => {
+    selectedIds.clear();
+    render();
+  });
+
+  document.getElementById("bulkApplyBtn").addEventListener("click", () => {
+    const val = document.getElementById("bulkInput").value.trim();
+    if(!val || selectedIds.size === 0) return;
+    selectedIds.forEach(id => { notes[id] = val; });
+    saveNotes();
+    selectedIds.clear();
+    document.getElementById("bulkInput").value = "";
+    render();
+  });
+
+  document.getElementById("bulkInput").addEventListener("keydown", (e) => {
+    if(e.key === "Enter") document.getElementById("bulkApplyBtn").click();
   });
 
   function legacyCopy(text){
