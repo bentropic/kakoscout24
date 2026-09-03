@@ -321,6 +321,47 @@
 
   const SURFACE = `a vivid orange textured carpet with "KAKOSCOUT24" woven into the fabric in bold clean white lettering, like a branded step-and-repeat rug used as the flat-lay surface`;
 
+  // Brand names are softened to generic style descriptors before they go into the
+  // actual ChatGPT prompt text, so the prompt doesn't ask the image model to render
+  // a legible trademark. The real product name still shows in the on-page UI/links
+  // below (that's just the marketer's own reference, not part of the generated image).
+  const BRAND_SOFTEN = [
+    [/\bLouis Vuitton\b/gi, "designer monogram-style"], [/\bLV\b/g, "designer monogram-style"],
+    [/\bMaison Francis Kurkdjian\b/gi, "luxury niche-perfume style"],
+    [/\bChrome Hearts?\b/gi, "gothic-cross designer-style"],
+    [/\bC\.?P\.? ?Company\b/gi, "technical-outerwear brand-style"],
+    [/\bPolo Ralph Lauren\b/gi, "polo-style designer"], [/\bRalph Lauren\b/gi, "polo-style designer"],
+    [/\bEric Emanuel\b/gi, "streetwear-shorts brand-style"],
+    [/\bCanada Goose\b/gi, "outdoor-brand style"],
+    [/\bPrincess Polly\b/gi, "fashion-brand style"],
+    [/\bJ'?Adior\b/gi, "designer-style"],
+    [/\bCartier\b/gi, "luxury-jeweler style"], [/\bRolex\b/gi, "luxury-watch style"], [/\bTissot\b/gi, "watch-brand style"],
+    [/\bMoncler\b/gi, "puffer-brand style"],
+    [/\bBurberry\b/gi, "check-pattern designer-style"],
+    [/\bGucci\b/gi, "designer monogram-style"], [/\bPrada\b/gi, "designer-style"], [/\bDior\b/gi, "designer-style"],
+    [/\bYSL\b/gi, "designer-style"], [/\bChanel\b/gi, "designer-style"], [/\bHerm[eè]s\b/gi, "designer-style"],
+    [/\bJacquemus\b/gi, "designer-style"], [/\bMiu Miu\b/gi, "designer-style"], [/\bBalenciaga\b/gi, "designer-style"],
+    [/\bAlexander McQueen\b/gi, "designer-style"], [/\bOff-White\b/gi, "streetwear brand-style"],
+    [/\bVlone\b/gi, "streetwear-graphic brand-style"], [/\bCorteiz\b/gi, "streetwear brand-style"],
+    [/\bSupreme\b/gi, "streetwear box-logo brand-style"], [/\bBAPE\b/gi, "streetwear brand-style"],
+    [/\bStone Island\b/gi, "technical-outerwear brand-style"], [/\bAmi\b/g, "heart-logo designer-style"],
+    [/\bCeline\b/gi, "designer-style"], [/\bLacoste\b/gi, "crocodile-logo brand-style"],
+    [/\bAdidas\b/gi, "three-stripe athletic-brand style"], [/\bNike\b/gi, "athletic-brand style"],
+    [/\bJordan\b/gi, "basketball-sneaker style"], [/\bAlo\b/g, "athleisure-brand style"],
+    [/\blululemon\b/gi, "athleisure-brand style"], [/\bSkims\b/gi, "shapewear-brand style"],
+    [/\bZara\b/gi, "fast-fashion brand-style"], [/\bAsics\b/gi, "running-shoe brand-style"],
+    [/\bCrocs\b/gi, "clog-brand style"], [/\bValentino\b/gi, "designer-style"], [/\bFerragamo\b/gi, "designer-style"],
+    [/\bGoyard\b/gi, "designer monogram-style"], [/\bSprayground\b/gi, "graphic-print backpack style"],
+    [/\bTrapstar\b/gi, "streetwear brand-style"], [/\bCasablanca\b/gi, "silk-print designer-style"],
+    [/\bDenim Tears\b/gi, "streetwear brand-style"], [/\bSyna ?World\b/gi, "streetwear brand-style"],
+    [/\bIsabel Marants?\b/gi, "designer-style"], [/\bAmiri\b/gi, "designer-style"],
+  ];
+  function softenName(name){
+    let out = name;
+    for(const [pattern, repl] of BRAND_SOFTEN) out = out.replace(pattern, repl);
+    return out.replace(/\s+/g, " ").trim();
+  }
+
   // One single prompt covering the whole carousel — copy once, attach all reference
   // photos (in the listed order) to one ChatGPT message, paste this, send.
   function combinedPrompt(outfit, extras){
@@ -332,15 +373,15 @@
       ? ` Also add to the final image only, purely for styling and not for sale — no price tag on these: ${extraList.map(e => `"${e}"`).join(" and ")}.`
       : "";
 
-    const refList = outfit.map((o,i) => `${i+1}) "${o.item.n}" ($${o.item.p.toFixed(2)})`).join(", ");
+    const refList = outfit.map((o,i) => `${i+1}) "${softenName(o.item.n)}" ($${o.item.p.toFixed(2)})`).join(", ");
 
     const perItemLines = outfit.map((o,i) =>
-      `Image ${i+1}: a single flat-lay of reference photo ${i+1} ("${o.item.n}") alone, centered in the upper two-thirds, on ${SURFACE}. A small bold price tag graphic in the bottom third reading exactly "$${o.item.p.toFixed(2)}".`
+      `Image ${i+1}: a single flat-lay of reference photo ${i+1} ("${softenName(o.item.n)}") alone, centered in the upper two-thirds, on ${SURFACE}. A small bold price tag graphic in the bottom third reading exactly "$${o.item.p.toFixed(2)}".`
     ).join("\n");
 
     return `Generate this TikTok photo carousel as ${n+1} separate images in this one response — actually generate each image now, don't just describe them. Every image: 3:4 portrait aspect ratio, flat-lay product photography shot straight-down from above, on ${SURFACE}, soft natural window light from one side, soft realistic shadow, minimal tidy editorial styling.
 
-I've attached ${n} reference photos, in this order: ${refList}. For every image, use each item's own reference photo for its true shape, color, print and visible brand logo — keep logos clearly legible, don't hide or reinvent them, don't change the color.
+I've attached ${n} reference photos, in this order: ${refList}. For every image, use each item's own reference photo for its true shape and color, but blur or soften any visible brand logos/wordmarks so they are not legible — do not render readable brand names or logos.
 
 ${perItemLines}
 Image ${n+1} (final): all ${n} pieces from the reference photos arranged together as one complete outfit, in realistic worn position top to bottom (top layer near the top of frame, bottom-wear below it, shoes at the base, any bag/accessory to the side), same carpet and lighting as the other images so it looks shot in the same session.${extraSentence} A price tag graphic in the bottom third reading exactly "${totalStr}" (the total of only the ${n} real pieces), and separately a text graphic reading exactly "Link in bio".
